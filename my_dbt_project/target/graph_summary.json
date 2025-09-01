@@ -1,0 +1,1 @@
+{"_invocation_id": "ca661aea-3dd7-4231-9e09-2255b6fe9aa2", "linked": {"0": {"name": "source.my_dbt_project.STOCKS.STOCK_PRICES", "type": "source", "succ": [2]}, "1": {"name": "model.my_dbt_project.curated_stock_prices", "type": "model"}, "2": {"name": "model.my_dbt_project.stg_stock_prices", "type": "model", "succ": [1]}}}

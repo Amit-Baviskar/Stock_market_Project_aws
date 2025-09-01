@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: STOCKS        # schema/database
+    database: STOCKS   # <-- replace with your Snowflake database name
+    schema: RAW              # <-- schema where the table lives
+    tables:
+      - name: STOCK_PRICES   # <-- your raw table name
