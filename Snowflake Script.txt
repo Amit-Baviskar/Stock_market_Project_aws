@@ -1,0 +1,143 @@
+------------------------------------------------------------------
+Setting up Snowflake 
+------------------------------------------------------------------
+
+-- Snowflake user creation
+-- Step 1: Use an admin role
+
+USE ROLE ACCOUNTADMIN;
+
+-- Step 2: Create the `transform` role and assign it to ACCOUNTADMIN
+
+CREATE ROLE IF NOT EXISTS TRANSFORM;
+GRANT ROLE TRANSFORM TO ROLE ACCOUNTADMIN;
+
+
+-- Step 3: Create a default warehouse
+
+CREATE WAREHOUSE IF NOT EXISTS COMPUTE_WH;
+GRANT OPERATE ON WAREHOUSE COMPUTE_WH TO ROLE TRANSFORM;
+
+
+-- Step 4: Create the `dbt` user and assign to the transform role
+
+CREATE USER IF NOT EXISTS dbt
+  PASSWORD='dbtPassword123'
+  LOGIN_NAME='dbt'
+  MUST_CHANGE_PASSWORD=FALSE
+  DEFAULT_WAREHOUSE='COMPUTE_WH'
+  DEFAULT_ROLE=TRANSFORM
+  DEFAULT_NAMESPACE='STOCKS.RAW'
+  COMMENT='DBT user used for data transformation';
+  
+ALTER USER dbt SET TYPE = LEGACY_SERVICE;
+GRANT ROLE TRANSFORM TO USER dbt;
+
+
+-- Step 5: Create a database and schema for the Stocks project
+
+CREATE DATABASE IF NOT EXISTS STOCKS;
+CREATE SCHEMA IF NOT EXISTS STOCKS.RAW;
+
+
+-- Step 6: Grant permissions to the `transform` role
+
+GRANT ALL ON WAREHOUSE COMPUTE_WH TO ROLE TRANSFORM;
+GRANT ALL ON DATABASE STOCKS TO ROLE TRANSFORM;
+GRANT ALL ON ALL SCHEMAS IN DATABASE STOCKS TO ROLE TRANSFORM;
+GRANT ALL ON FUTURE SCHEMAS IN DATABASE STOCKS TO ROLE TRANSFORM;
+GRANT ALL ON ALL TABLES IN SCHEMA STOCKS.RAW TO ROLE TRANSFORM;
+GRANT ALL ON FUTURE TABLES IN SCHEMA STOCKS.RAW TO ROLE TRANSFORM;
+
+
+
+
+
+-------------------------------------------------------------------
+Setting Storage Integration
+-------------------------------------------------------------------
+
+-- Set defaults
+USE WAREHOUSE COMPUTE_WH;
+USE DATABASE STOCKS;
+USE SCHEMA RAW;
+
+
+-- Create Stage for data transfer
+
+
+CREATE STAGE stockmarkerstage
+  URL='s3://stock-market-project-1'
+  CREDENTIALS=(AWS_KEY_ID='  ' AWS_SECRET_KEY='  ');
+  
+
+
+-- Load STOCKS_Raw
+-- Create staging table for stock prices
+
+CREATE OR REPLACE TABLE STOCK_PRICES (
+    TRADE_DATE   DATE,
+    TICKER       STRING,
+    OPEN_PRICE   FLOAT,
+    HIGH_PRICE   FLOAT,
+    LOW_PRICE    FLOAT,
+    CLOSE_PRICE  FLOAT,
+    VOLUME       BIGINT
+);
+
+
+
+-- COPY Command (for loading from S3)
+
+COPY INTO STG_STOCK_PRICES
+FROM @stockmarkerstage/stock_data_clean.csv
+FILE_FORMAT = (
+    TYPE = CSV
+    FIELD_OPTIONALLY_ENCLOSED_BY='"'
+    SKIP_HEADER = 1
+);
+
+-- Check For Data Received
+
+SELECT * FROM STOCK_PRICES;
+
+SELECT * FROM STOCKS.RAW_CURATED.CURATED_STOCK_PRICES;
+
+
+----------------------------------------------------------------
+Setting Stage for file Export
+----------------------------------------------------------------
+-- Set defaults
+USE WAREHOUSE COMPUTE_WH;
+USE DATABASE STOCKS;
+USE SCHEMA RAW_CURATED;
+
+
+-- Step 1. Create Parquet File Format
+CREATE OR REPLACE FILE FORMAT my_parquet_format
+  TYPE = PARQUET
+  COMPRESSION = SNAPPY;
+
+  
+
+ -- Step 2. Create an External Stage to S3
+
+
+CREATE OR REPLACE STAGE my_s3_stage
+  URL = 's3://curated-stock-data/'
+  CREDENTIALS = (
+      AWS_KEY_ID = ' '
+      AWS_SECRET_KEY = ' '
+  )
+  FILE_FORMAT = my_parquet_format;   
+  
+  
+
+-- Step 3. Export Data from Table to S3 in Parquet
+
+COPY INTO @my_s3_stage/curated_stock_prices_
+FROM (SELECT * FROM STOCKS.RAW_CURATED.CURATED_STOCK_PRICES)
+FILE_FORMAT = (TYPE = PARQUET COMPRESSION = SNAPPY)
+OVERWRITE = TRUE;
+
+
