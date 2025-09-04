@@ -17,7 +17,7 @@ The pipeline extracts stock market data, stages it in Snowflake, and then export
 
 ## Project Architecture Flowchart
 
-![Image](https://github.com/user-attachments/assets/189b7e22-43db-4af6-bfa8-0689a6b04d62)
+![Image](https://github.com/user-attachments/assets/39bedb2e-57bb-46ca-ba13-af60890132b3)
 
 ## Project Structure
     models/
