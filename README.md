@@ -15,6 +15,10 @@ The pipeline extracts stock market data, stages it in Snowflake, and then export
 
  * Parquet – Columnar file format for optimized querying in Athena/Glue
 
+## Project Architecture Flowchart
+
+![Image](https://github.com/user-attachments/assets/189b7e22-43db-4af6-bfa8-0689a6b04d62)
+
 ## Project Structure
     models/
     │── staging/
